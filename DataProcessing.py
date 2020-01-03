@@ -33,7 +33,7 @@ def data_to_tensor(data, dtype=torch.float32, device='cpu'):
     return data
 
 
-def data_augment(data, normalize=True, mask=None, transpose=False):
+def data_mask(data, normalize=True, mask=None, transpose=False):
     if normalize:
         std, mean = torch.std_mean(data[mask])
         data = (data - mean) / std
@@ -44,7 +44,7 @@ def data_augment(data, normalize=True, mask=None, transpose=False):
     return data
 
 
-def data_crop(data, mask, crop_size=32, masked=True):
+def data_crop(data, mask, crop_size=32, masked=True, normalize=True):
     if masked:
         data = data.mul(mask.to(dtype=torch.float32))
     x = mask.sum(dim=2).sum(dim=2).squeeze()
@@ -68,6 +68,9 @@ def data_crop(data, mask, crop_size=32, masked=True):
         data_cropped[i] = data[i, (seg_center[0] - crop_size // 2):(seg_center[0] + crop_size // 2),
                                   (seg_center[1] - crop_size // 2):(seg_center[1] + crop_size // 2),
                                   (seg_center[2] - crop_size // 2):(seg_center[2] + crop_size // 2)]
+        if normalize:
+            std, mean = torch.std_mean(data_cropped, dim=[1, 2, 3], keepdim=True)
+            data_cropped = (data_cropped - mean) / std
     return data_cropped
 
 
@@ -95,3 +98,13 @@ def data_resize(data, mask, size, normalize=True, masked=False):
             std, mean = torch.std_mean(result[i])
             result[i] = (result[i] - mean) / std
     return result
+
+
+def data_rotate(data, dim=0):
+    if dim == 0:
+        data = data.permute(1, 3, 2)
+    elif dim == 1:
+        data = data.permute(3, 1, 2)
+    else:
+        data = data.permute(2, 1, 3)
+    return data
